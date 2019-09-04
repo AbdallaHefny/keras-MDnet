@@ -1,69 +1,62 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 27 15:44:19 2019
-
-@author: pc
-"""
-
 import numpy as np
 
 
 def mdnet_finetune(fc_net, pos_data, neg_data, batch_size, iterataions):
-    #  batch_size = 128 
-    n_pos = len(pos_data)  
-    n_neg = len(neg_data)  
+    """
+    from: https://github.com/hyeonseobnam/py-MDNet/blob/master/tracking/run_tracker.py
+    with modifications 
+    """
+    batch_pos = 32
+    batch_neg = 96
+    batch_test = 256
+    batch_neg_cand = 1024
     
-    if (n_pos> 32*iterataions):
-        idx = np.random.permutation(32*iterataions)
-        pos_data = pos_data[idx]
-
-    count_neg = 0
-    count_pos= 0
+    targets_pos = np.zeros((32, 2))
+    targets_pos[:, 1] =1
+    targets_neg = np.zeros((96, 2))
+    targets_neg[:, 0] =1
     
-    for t in range(iterataions):
-        scores_hneg = []
-        remaining = n_neg - count_neg
-        if remaining > 1024:
-            part_neg_data = neg_data[count_neg: count_neg+1024]
-            count_neg += 1024
-        else:
-            part_neg_data = neg_data[count_neg: count_neg+remaining]
-            count_neg = 0
-            idx = np.random.permutation(n_neg)
-            neg_data = neg_data[idx]
+    targets = np.zeros((128, 2))
+    targets[:32, 1] = 1
+    targets[32:, 0] = 1
+    
+    pos_idx = np.random.permutation(len(pos_data))
+    neg_idx = np.random.permutation(len(neg_data))
+    while (len(pos_idx) < batch_pos * iterataions):
+        pos_idx = np.concatenate([pos_idx, np.random.permutation(len(pos_data))])
+    while (len(neg_idx) < batch_neg_cand * iterataions):
+        neg_idx = np.concatenate([neg_idx, np.random.permutation(len(neg_data))])
+    
+    pos_pointer = 0
+    neg_pointer = 0
+    
+    for i in range (iterataions):
         
-        num_batches = int(np.ceil(len(part_neg_data)/batch_size)) 
-                                                                 
-        for h in range (num_batches):
-            batch_neg = part_neg_data[h*batch_size : min((h+1)*batch_size,len(part_neg_data))]
-            targets_neg = np.zeros((len(batch_neg), 2))  
-            targets_neg[:,0] = 1  
+        pos_next = pos_pointer + batch_pos
+        batch_pos_feats = pos_data[pos_idx[pos_pointer: pos_next]]
+        pos_pointer = pos_next
+        
+        neg_next = neg_pointer + batch_neg_cand
+        batch_neg_feats = neg_data[neg_idx[neg_pointer: neg_next]]
+        neg_pointer = neg_next
+        
+        if batch_neg_cand > batch_neg:
+            for start in range(0, batch_neg_cand, batch_test):
+                end = min(start + batch_test, batch_neg_cand)
+                
+                score = fc_net.predict(batch_neg_feats[start:end])
+                if start==0:
+                    neg_cand_score = score[:, 1]
+                else:
+                    neg_cand_score = np.concatenate((neg_cand_score, score[:, 1]), axis = 0)
+                    
+            top_idx = np.argsort(neg_cand_score)[-batch_neg:]
+            batch_neg_feats = batch_neg_feats[top_idx]
             
-            res = fc_net.predict(batch_neg) # (batch_size, 2)numpy array  
-            scores_hneg.extend(res[:,1].tolist())
-        scores_hneg = np.array(scores_hneg)  #shape (len(part_neg_data),)
+        # train
+        batch = np.concatenate((batch_pos_feats, batch_neg_feats), axis = 0)
+        _ = fc_net.fit(batch, targets, shuffle = True, verbose = 0)
+        
 
-        idx = np.argsort(scores_hneg)
-        hard_data = part_neg_data[idx[-96:]]  
-                                              
-                                              
-              
-        remaining = n_pos - count_pos
-        if remaining > 32:
-            part_pos_data = pos_data[count_pos: count_pos+64]
-            count_pos += 32              
-        else:
-            part_pos_data = pos_data[count_pos: count_pos+remaining]
-            count_pos = 0
-            idx = np.random.permutation(n_pos)
-            pos_data = pos_data[idx]
-        
-        batch = np.concatenate((part_pos_data, hard_data), axis = 0) 
-                                                                     
-        targets_whole = np.zeros((len(batch), 2))
-        targets_whole[:len(part_pos_data),1] = 1
-        targets_whole[len(part_pos_data):,0] = 1
-        
-#        tr_loss = fc_net.train_on_batch(batch, targets_whole)
-        _ = fc_net.fit(batch, targets_whole, batch_size = 128, shuffle = True, verbose = 0)
- 
+
+#     

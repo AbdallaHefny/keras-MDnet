@@ -1,7 +1,9 @@
 from keras.optimizers import Optimizer
 from keras.utils import get_custom_objects
 
-
+####################################################
+# credits: https://github.com/stante/keras-contrib/blob/feature-lr-multiplier/keras_contrib/optimizers/lr_multiplier.py
+##################################################
 class LearningRateMultiplier(Optimizer):
     """Optimizer wrapper for per layer learning rate.
 

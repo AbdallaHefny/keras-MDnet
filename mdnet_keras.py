@@ -1,14 +1,9 @@
- # -*- coding: utf-8 -*-
-"""
-Created on Fri Aug 30 15:43:25 2019
-
-@author: pc
-"""
-
 import tensorflow as tf
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, Layer, Activation
 from keras.models import Sequential
 
+
+# Inter-channel LRN
 class LocalResponseNormalization(Layer):
 
     def __init__(self, n=5, alpha=0.0001, beta=0.75, k=2, **kwargs):    
@@ -61,7 +56,7 @@ def create_model():
     return model
 
 
-#
+
 #  Inta Channel LRN
 #class LocalResponseNormalization(Layer):
 #

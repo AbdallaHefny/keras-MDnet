@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Sep  1 14:29:29 2019
-
-@author: pc
-"""
 import numpy as np
-
 from sklearn.linear_model import Ridge
 
 class BBoxRegressor():
-    def __init__(self, reg_net):
-#         self.model = reg_net
-#         self.model.compile(loss='mean_squared_error', optimizer='adam')
-         self.model = Ridge(alpha=1000)
-         
-         
+    def __init__(self):
+        self.model = Ridge(alpha=1000)
+                        
     def prepare_targets(self, boxes, gt):
         """
         boxes is a numpy array each box is [topx, topy, w, h]
@@ -39,10 +29,10 @@ class BBoxRegressor():
         boxes is a numpy array each box is [topx, topy, w, h]
         gt is list [topx, topy, w, h]
         """
-        Y= self.prepare_targets(boxes, gt)
+        Y= self.prepare_targets(boxes, gt)     
         self.model.fit(X, Y)
-#        self.model.fit(X, Y, epochs= 100,  verbose = 0)
-        
+    
+     
     def predict(self, X, boxes):
         """
         X is a numpy (5, 4608) array
