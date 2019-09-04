@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 26 12:07:15 2019
-
-@author: pc
-"""
-
 import os
 import numpy as np
 from PIL import Image
@@ -30,7 +23,10 @@ def get_data(path):
     return imgList, gt
 
 def gen_samples(method, bb, n, imgSize, trans_f = 1, scale_f = 1 , aspect_f=None, valid = False):
-    #### From https://github.com/keithyuck/Object-Tracking/tree/master/py-MDNet
+    """
+    from: https://github.com/hyeonseobnam/py-MDNet/blob/master/modules/sample_generator.py
+    with modifications
+    """
     img_size = np.array(imgSize[0:2])   
     # bb is numpy array [x, y, box-width, box-height]
     sample = [bb[0]+bb[2]/2, bb[1]+bb[3]/2, bb[2], bb[3]] #[center_x center_y width height]
@@ -51,14 +47,23 @@ def gen_samples(method, bb, n, imgSize, trans_f = 1, scale_f = 1 , aspect_f=None
         samples[:,2:] *= scale_f ** (np.random.rand(n,1)*2-1)
         
         
+#    if method == 'whole':
+#        m = int(2*np.sqrt(n))
+#        xy = np.dstack(np.meshgrid(np.linspace(0,1,m),np.linspace(0,1,m))).reshape(-1,2)
+#        xy = np.random.permutation(xy)[:n]
+#        samples[:,:2] = bb[2:]/2 + xy * (img_size-bb[2:]/2-1)
+#        #samples[:,:2] = bb[2:]/2 + np.random.rand(n,2) * (self.img_size-bb[2:]/2-1)
+#        samples[:,2:] *= scale_f ** (np.random.rand(n,1)*2-1)
+        
+                      
     if method == 'whole':
-        m = int(2*np.sqrt(n))
+        h,w,_ = imgSize
+        m = int(4*np.sqrt(n))
         xy = np.dstack(np.meshgrid(np.linspace(0,1,m),np.linspace(0,1,m))).reshape(-1,2)
         xy = np.random.permutation(xy)[:n]
-        samples[:,:2] = bb[2:]/2 + xy * (img_size-bb[2:]/2-1)
-        #samples[:,:2] = bb[2:]/2 + np.random.rand(n,2) * (self.img_size-bb[2:]/2-1)
-        samples[:,2:] *= scale_f ** (np.random.rand(n,1)*2-1)
-
+        samples[:,:2] = bb[2:]/2 + xy * ((w,h)-bb[2:]/2-1)
+        samples[:,2:] *= 1.1 ** (np.random.rand(n,1)*2-1)
+    
     samples[:,2:] = np.clip(samples[:,2:], 10, img_size-10)
     
     if valid:
@@ -68,10 +73,7 @@ def gen_samples(method, bb, n, imgSize, trans_f = 1, scale_f = 1 , aspect_f=None
     
     # (min_x, min_y, w, h)
     samples[:,:2] -= samples[:,2:]/2
-
     return samples
-
-
 
 
 def iou_score(bboxes, target):
@@ -102,23 +104,74 @@ def iou_score(bboxes, target):
     return 1.0 * intersection / union    
 
 def extract_regions(image, boxes, final_dim):
+    
     """
+    from: https://github.com/hyeonseobnam/py-MDNet/blob/master/modules/utils.py
+    with minor changes
+    
     Params:
         image is a numpy 3D array of the image
         
-        boxes are all boxes regions [x y w h]
+        boxes are all boxes regions [x y w h]  i.e: shape(n, 4)
         final dim is the input dimension of the model i.e. 107
     
     Returns:
         numpy array of shape(number of boxes, final_dim, final_dim ,3)
     """
-    image_obj = Image.fromarray(image)
-    regions = []
-    for (i, box) in enumerate (boxes):
-        regions.append(np.array(image_obj.resize((final_dim, final_dim), Image.BILINEAR)))
-    return np.array(regions)
+    boxes = np.copy(boxes)
+    boxes = np.rint(boxes).astype(int)
+    scaled = []
+    for box in boxes:
+        x,y,w,h = np.array(box, dtype='float32')
+        half_w, half_h = w / 2, h / 2
+        center_x, center_y = x + half_w, y + half_h
+        
+        pad_w = 16 * w / 107
+        pad_h = 16 * h / 107
+        half_w += pad_w
+        half_h += pad_h
+        
+        img_h, img_w, _ = image.shape
+        min_x = int(center_x - half_w + 0.5)
+        min_y = int(center_y - half_h + 0.5)
+        max_x = int(center_x + half_w + 0.5)
+        max_y = int(center_y + half_h + 0.5)
+        
+        if min_x >=0 and min_y >= 0 and max_x <= img_w and max_y <= img_h:
+            cropped = image[min_y:max_y, min_x:max_x, :]
+        else:
+            min_x_val = max(0, min_x)
+            min_y_val = max(0, min_y)
+            max_x_val = min(img_w, max_x)
+            max_y_val = min(img_h, max_y)
+    
+            cropped = 128 * np.ones((max_y - min_y, max_x - min_x, 3), dtype='uint8')
+            try:
+                cropped[min_y_val - min_y:max_y_val - min_y, min_x_val - min_x:max_x_val - min_x, :] \
+                    = image[min_y_val:max_y_val, min_x_val:max_x_val, :]
+            except:
+                continue               
+        
+        image_obj = Image.fromarray(cropped)
+        scaled.append(np.array(image_obj.resize((final_dim, final_dim), Image.BILINEAR)))
+    return np.array(scaled)
+    
+#    y1 = np.maximum(boxes[:, 1], 0)
+#    y2 = np.minimum(y1 + boxes[:, 3], image.shape[0]-1)
+#    x1 = np.maximum(boxes[:, 0], 0)
+#    x2 = np.minimum(x1 + boxes[:, 2], image.shape[1]-1)
+#    regions = []
+#    for i in range(len(boxes)):   
+#
+#        if (x2[i]<= x1[i] or y2[i] <= y1[i]):  # in 'whole' extracted regions
+#            continue
+#        part = image[y1[i]: y2[i], x1[i]: x2[i], :]
+#        image_obj = Image.fromarray(part)
+#        regions.append(np.array(image_obj.resize((final_dim, final_dim), Image.BILINEAR)))
+#    return np.array(regions)
         
 
+#        print("{}: {}, {}: {}".format(y1[i], y2[i], x1[i], x2[i]))
 
 
 #def gen_samples(method, bb, n, imgSize, scale_factor, trans_f = None, scale_f=None):
