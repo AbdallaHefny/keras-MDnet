@@ -30,6 +30,7 @@ def get_data(path):
     return imgList, gt
 
 def gen_samples(method, bb, n, imgSize, trans_f = 1, scale_f = 1 , aspect_f=None, valid = False):
+    #### From https://github.com/keithyuck/Object-Tracking/tree/master/py-MDNet
     img_size = np.array(imgSize[0:2])   
     # bb is numpy array [x, y, box-width, box-height]
     sample = [bb[0]+bb[2]/2, bb[1]+bb[3]/2, bb[2], bb[3]] #[center_x center_y width height]
