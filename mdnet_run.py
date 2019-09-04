@@ -18,7 +18,7 @@ opts = Options()
 #####################
 # Initialization
 #####################
-path = os.path.join(os.getcwd(), 'data', 'Diving')
+path = os.path.join(os.getcwd(), 'data', 'Car1')
 imgList, gt = get_data(path) # gt: (x, y, box-width, box-height)
 
 nFrames = len(imgList)
