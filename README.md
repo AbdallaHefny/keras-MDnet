@@ -25,6 +25,6 @@ This keras implementation converts torch model (trained only on VOT) to keras
 
 Fine tuning and object tracking are done in keras backend
 
-## TODO
+### TODO
 * Implement pre-training scheme using keras
 * Train keras model on both VOT and OTB
