@@ -6,11 +6,11 @@ Original matlab implimentation: https://github.com/hyeonseobnam/MDNet
 ## Prerequisites
 ```
 keras
-scikit-learn
+scikit-learn (for Ridge regression)
 ```
 ### Usage
 ```
- python mdnet_run.py
+ python mdnet_run.py -s Car1 -r
 ```
 
 
