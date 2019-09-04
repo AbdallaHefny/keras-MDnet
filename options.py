@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Aug 30 15:31:43 2019
-
-@author: pc
-"""
-
 class Options:
     batchSize_test = 64     # I changed it from 256
     
