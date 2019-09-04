@@ -15,7 +15,7 @@ scikit-learn (for Ridge regression)
 ### Usage
 * Run 
 ```
- python mdnet_run.py -s Car1 -r
+   python mdnet_run.py -s Car1 -r
 ```
 * You may replace 'Car1' with any [OTB](http://cvlab.hanyang.ac.kr/tracker_benchmark/datasets.html) or [VOT](http://www.votchallenge.net/) sequence
 ### Details
