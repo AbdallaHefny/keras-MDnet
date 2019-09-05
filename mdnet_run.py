@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib import patches
 from keras import optimizers
 import argparse 
+import time
 
 from utils import get_data, gen_samples, iou_score, extract_regions
 from options import Options  
@@ -149,6 +150,7 @@ success_thr = 0
 
 for f in range(1,nFrames):
     print("processing frame {} / {}".format(f+1, nFrames))
+    t_begin = time.time()
     img = imread(imgList[f])
     if (len(img.shape) != 3):
         img = np.expand_dims(img, -1)
@@ -270,3 +272,6 @@ for f in range(1,nFrames):
               
     plt.pause(.01)
     plt.draw()
+    
+    t_total = time.time() - t_begin
+    print("time required: {:.3f} s",format(t_total))
